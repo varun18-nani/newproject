@@ -89,8 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateProfileUI() {
         const { name, email, goal, photoURL } = userData.profile;
         document.getElementById('profile-name').textContent = name || 'User';
+        document.getElementById('ig-username-header').textContent = name || 'User';
         document.getElementById('profile-email').textContent = email || 'No Email';
-        document.getElementById('profile-goal').textContent = goal ? `Goal: ${goal}` : 'Goal: Not Set';
+        document.getElementById('profile-goal').textContent = goal ? `${goal}` : 'Goal: Not Set';
         
         const avatarEl = document.getElementById('profile-avatar');
         if (photoURL) {
@@ -908,6 +909,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupProfileEditListeners() {
+        // Direct Avatar Upload Logic
+        const wrapper = document.getElementById('profile-avatar-wrapper');
+        const directInput = document.getElementById('direct-profile-photo');
+        
+        if (wrapper && directInput) {
+            wrapper.addEventListener('click', () => directInput.click());
+            
+            directInput.addEventListener('change', async (e) => {
+                if (!currentUser || e.target.files.length === 0) return;
+                const file = e.target.files[0];
+                
+                const overlay = document.querySelector('.ig-avatar-overlay');
+                overlay.innerHTML = '<i data-lucide="loader-2" class="spin"></i>';
+                overlay.style.opacity = '1';
+                lucide.createIcons();
+                
+                try {
+                    const storageRef = ref(storage, `profile_photos/${currentUser.uid}_${file.name}`);
+                    await uploadBytes(storageRef, file);
+                    const photoURL = await getDownloadURL(storageRef);
+                    
+                    userData.profile = { ...userData.profile, photoURL };
+                    await updateDoc(doc(db, 'users', currentUser.uid), { profile: userData.profile });
+                    updateProfileUI();
+                } catch (err) {
+                    console.error("Error uploading photo:", err);
+                    alert("Failed to upload photo.");
+                } finally {
+                    overlay.style.opacity = '';
+                    overlay.innerHTML = '<i data-lucide="camera"></i>';
+                    lucide.createIcons();
+                }
+            });
+        }
+
+        // Standard Modal Logic
         const modal = document.getElementById('profile-edit-modal');
         const openBtn = document.getElementById('open-edit-profile-btn');
         const closeBtn = document.getElementById('close-profile-modal');
@@ -933,17 +970,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const name = document.getElementById('edit-profile-name').value;
                 const goal = document.getElementById('edit-profile-goal').value;
-                const fileInput = document.getElementById('edit-profile-photo');
-                let photoURL = userData.profile.photoURL;
                 
-                if (fileInput.files.length > 0) {
-                    const file = fileInput.files[0];
-                    const storageRef = ref(storage, `profile_photos/${currentUser.uid}_${file.name}`);
-                    await uploadBytes(storageRef, file);
-                    photoURL = await getDownloadURL(storageRef);
-                }
+                // Photo is now handled directly by the avatar wrapper!
                 
-                userData.profile = { ...userData.profile, name, goal, photoURL };
+                userData.profile = { ...userData.profile, name, goal };
                 await updateDoc(doc(db, 'users', currentUser.uid), {
                     profile: userData.profile
                 });

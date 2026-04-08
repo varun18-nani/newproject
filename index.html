@@ -18,10 +18,6 @@
     <nav id="main-nav" style="display: none;">
         <div class="brand" id="nav-brand">CareerRoadmap</div>
         <div class="nav-actions">
-            <div class="search-container">
-                <i data-lucide="search" class="search-icon"></i>
-                <input type="text" id="course-search" placeholder="Search paths (e.g. AI, MBA)..." autocomplete="off">
-            </div>
             <button class="sign-out-btn" id="sign-out">
                 <i data-lucide="log-out"></i>
             </button>
@@ -128,7 +124,11 @@
             <section id="path-selection" class="view-section active fade-in">
                 <header style="text-align: center; margin-bottom: 50px; padding-top: 20px;">
                     <h1 style="font-size: 2.5rem; margin-bottom: 10px;">Select Your Path</h1>
-                    <p style="color: var(--text-secondary); font-size: 1rem;">Choose a career field to see your step-by-step roadmap.</p>
+                    <p style="color: var(--text-secondary); font-size: 1rem; margin-bottom: 30px;">Choose a career field to see your step-by-step roadmap.</p>
+                    <div class="search-container" style="max-width: 500px; margin: 0 auto; background: var(--bg-hover); border-radius: 20px; padding: 5px 15px; display: flex; align-items: center; border: 1px solid var(--border-color); animation: float 6s ease-in-out infinite;">
+                        <i data-lucide="search" class="search-icon" style="color: var(--text-secondary); width: 18px; height: 18px;"></i>
+                        <input type="text" id="course-search" placeholder="Search paths (e.g. AI, MBA)..." autocomplete="off" style="border: none; background: transparent; padding: 12px; width: 100%; color: var(--text-primary); outline: none; font-size: 1rem;">
+                    </div>
                 </header>
                 
                 <div id="dashboard">
@@ -168,12 +168,12 @@
                         </div>
                     </div>
 
-                    <!-- AI Adaptive Schedule Panel -->
-                    <div class="adaptive-schedule-panel" id="adaptive-schedule-panel">
+                    <!-- Adaptive Schedule Panel -->
+                    <div class="adaptive-schedule-panel fade-in-stagger" id="adaptive-schedule-panel">
                         <div class="schedule-panel-header">
-                            <i data-lucide="sparkles"></i>
-                            <h3>Your AI-Powered Schedule</h3>
-                            <span class="ai-badge">Adaptive</span>
+                            <i data-lucide="calendar"></i>
+                            <h3>Your Dynamic Schedule</h3>
+                            <span class="ai-badge">Personalized</span>
                         </div>
                         <p class="schedule-subtitle">Complete module tests to unlock your personalized learning schedule.</p>
                         <div class="schedule-weeks" id="schedule-weeks">
@@ -257,7 +257,7 @@
 
                     <!-- Diag Intro -->
                     <div id="diag-intro-state">
-                        <p id="diag-intro-desc">Take this quick placement test to generate your initial AI-powered schedule.</p>
+                        <p id="diag-intro-desc">Take this quick placement test to generate your initial learning schedule.</p>
                         <div class="test-meta">
                             <span><i data-lucide="help-circle"></i> <span id="diag-q-count">5</span> Questions</span>
                             <span><i data-lucide="clock"></i> ~5 Minutes</span>
@@ -304,47 +304,55 @@
                 </div>
             </section>
 
-            <!-- Profile View -->
+            <!-- Profile View (Instagram Style) -->
             <section id="profile-view" class="view-section">
-                <header class="section-header">
-                    <h2>User Profile</h2>
-                    <p>Monitor your professional growth</p>
-                </header>
-                <div class="profile-dashboard">
-                    <div class="profile-card">
-                        <div class="profile-header" style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
-                            <div style="display:flex; align-items:center; gap:20px;">
-                                <div class="avatar" id="profile-avatar" style="background-size: cover; background-position: center; flex-shrink: 0;">J</div>
-                                <div>
-                                    <h3 id="profile-name">John Doe</h3>
-                                    <p id="profile-email">john@example.com</p>
-                                    <p id="profile-goal" style="color: var(--accent-color); font-size: 0.9rem; margin-top: 5px;"></p>
-                                </div>
+                <div class="ig-profile-container fade-in-stagger">
+                    <div class="ig-header">
+                        <i data-lucide="lock" style="width:16px;"></i>
+                        <h2 id="ig-username-header">User</h2>
+                    </div>
+
+                    <div class="ig-profile-info">
+                        <div class="ig-avatar-wrapper" id="profile-avatar-wrapper">
+                            <div class="ig-avatar" id="profile-avatar">J</div>
+                            <div class="ig-avatar-overlay">
+                                <i data-lucide="camera"></i>
                             </div>
-                            <button id="open-edit-profile-btn" style="padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s;"><i data-lucide="edit-3" style="width:16px; height:16px;"></i> Edit</button>
+                            <!-- Hidden input for direct upload -->
+                            <input type="file" id="direct-profile-photo" accept="image/*" style="display:none;">
                         </div>
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <span class="stat-value" id="stats-completed">0</span>
-                                <span class="stat-label">Skills Completed</span>
+                        <div class="ig-stats">
+                            <div class="ig-stat-col">
+                                <span class="ig-stat-val" id="stats-quizzes">0</span>
+                                <span class="ig-stat-label">Tests</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-value" id="stats-quizzes">0</span>
-                                <span class="stat-label">Quizzes Taken</span>
+                            <div class="ig-stat-col">
+                                <span class="ig-stat-val" id="stats-completed">0</span>
+                                <span class="ig-stat-label">Skills</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-value" id="stats-level">Junior</span>
-                                <span class="stat-label">Member Level</span>
+                            <div class="ig-stat-col">
+                                <span class="ig-stat-val" id="stats-level">Jr</span>
+                                <span class="ig-stat-label">Level</span>
                             </div>
                         </div>
                     </div>
-                    <div class="achievements-section">
-                        <h3>Recent Achievements</h3>
-                        <div class="badges-grid" id="badges-container">
-                            <!-- Badges will be injected here -->
-                            <div class="badge-locked"><i data-lucide="lock"></i></div>
-                            <div class="badge-locked"><i data-lucide="lock"></i></div>
-                        </div>
+
+                    <div class="ig-bio">
+                        <strong id="profile-name">John Doe</strong>
+                        <p id="profile-email" style="color:var(--text-secondary); margin-bottom:4px;">john@example.com</p>
+                        <p id="profile-goal">Goal: Not Set</p>
+                    </div>
+
+                    <button id="open-edit-profile-btn" class="ig-btn-edit">Edit Profile</button>
+                    
+                    <div class="ig-divider"></div>
+
+                    <div class="ig-tabs">
+                        <div class="ig-tab active"><i data-lucide="grid"></i> BADGES</div>
+                    </div>
+
+                    <div class="ig-feed-grid" id="badges-container">
+                        <!-- Badges will be injected here -->
                     </div>
                 </div>
             </section>

@@ -54,8 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialization ---
     function init() {
-        checkAuth();
         setupEventListeners();
+        checkAuth();
         setupTestModalListeners();
         setupProfileEditListeners();
         setupDiagnosticListeners();
@@ -1048,6 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function setupProfileEditListeners() {
         // New Design Listeners
         const signOutBtnNew = document.getElementById('sign-out-btn-new');
         if (signOutBtnNew) signOutBtnNew.onclick = () => signOut(auth);
@@ -1085,8 +1086,24 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        updateProfileUI();
-        modal.style.display = 'none';
+        const closeProfileModal = document.getElementById('close-profile-modal');
+        if (closeProfileModal) {
+            closeProfileModal.onclick = () => {
+                document.getElementById('profile-edit-modal').style.display = 'none';
+            };
+        }
+
+        document.getElementById('profile-edit-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('edit-profile-name').value;
+            const goal = document.getElementById('edit-profile-goal').value;
+            userData.profile = { ...userData.profile, name, goal };
+            if (currentUser) {
+                await updateDoc(doc(db, 'users', currentUser.uid), { profile: userData.profile });
+            }
+            updateProfileUI();
+            document.getElementById('profile-edit-modal').style.display = 'none';
+        };
     }
 
     function setupDiagnosticListeners() {

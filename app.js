@@ -1781,6 +1781,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const toggleRegister = document.getElementById('toggle-register');
+        const togglePrefix = document.getElementById('toggle-prefix');
         toggleRegister.addEventListener('click', (e) => {
             e.preventDefault();
             isRegistering = !isRegistering;
@@ -1795,14 +1796,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 header.textContent = 'Create Account';
                 desc.textContent = 'Join the career roadmap community';
                 submitBtn.textContent = 'Sign Up';
-                toggleRegister.textContent = 'Already have an account? Sign in';
+                if (togglePrefix) togglePrefix.textContent = 'Already have an account? ';
+                toggleRegister.textContent = 'Sign in';
                 if (nameGroup) nameGroup.style.display = 'block';
                 if (nameInput) nameInput.setAttribute('required', 'required');
             } else {
                 header.textContent = 'Welcome Back';
                 desc.textContent = 'Start your career journey with us';
                 submitBtn.textContent = 'Sign In';
-                toggleRegister.textContent = "Don't have an account? Create an account";
+                if (togglePrefix) togglePrefix.textContent = "Don't have an account? ";
+                toggleRegister.textContent = 'Create an account';
                 if (nameGroup) nameGroup.style.display = 'none';
                 if (nameInput) nameInput.removeAttribute('required');
             }

@@ -295,6 +295,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =============================================
+    // CODING CONTESTS DATA & RENDERER
+    // =============================================
+    const UPCOMING_CONTESTS = [
+        { id: 'lc-450', platform: 'LeetCode', title: 'Weekly Contest 450', date: 'Sunday, 8:00 AM PST', requiredFor: ['dsa', 'python', 'full-stack', 'java', 'robotics'], icon: 'code' },
+        { id: 'cc-130', platform: 'CodeChef', title: 'Starters 130 (Rated)', date: 'Wednesday, 8:00 PM IST', requiredFor: ['dsa', 'python', 'full-stack', 'java'], icon: 'terminal' },
+        { id: 'lc-bi-100', platform: 'LeetCode', title: 'Biweekly Contest 100', date: 'Saturday, 7:30 AM PST', requiredFor: ['dsa', 'python'], icon: 'binary' }
+    ];
+
+    function renderQuizzes() {
+        const quizList = document.getElementById('quiz-list');
+        if (!quizList) return;
+        
+        quizList.innerHTML = `
+            <div style="grid-column: 1/-1; margin-bottom: 20px;">
+                <h3 style="font-size: 1.5rem; margin-bottom: 10px;">Upcoming Coding Contests</h3>
+                <p style="color: var(--text-secondary);">Participate in these contests to automatically update your skill rating and adjust your dynamic schedule.</p>
+            </div>
+        `;
+
+        UPCOMING_CONTESTS.forEach(contest => {
+            // Check if user already attended
+            const score = userData.platformScores && userData.platformScores[contest.platform] ? userData.platformScores[contest.platform].score : null;
+            const attended = score !== null;
+
+            const card = document.createElement('div');
+            card.className = 'quiz-card';
+            card.style.background = 'white';
+            card.style.border = '1px solid var(--border-color)';
+            card.style.borderRadius = '20px';
+            card.style.padding = '20px';
+
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                    <div style="width: 50px; height: 50px; border-radius: 12px; background: var(--bg-hover); display: flex; align-items: center; justify-content: center; color: var(--primary);">
+                        <i data-lucide="${contest.icon}"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">${contest.title}</h4>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); background: var(--bg-hover); padding: 2px 8px; border-radius: 10px;">${contest.platform}</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                    <p><i data-lucide="calendar" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i> ${contest.date}</p>
+                </div>
+                ${attended ? 
+                    `<div style="background: rgba(34,197,94,0.1); color: var(--success); padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; margin-bottom: 15px;">
+                        Status: Attended (Score: ${score})
+                    </div>` : 
+                    `<button class="btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="simulateContest('${contest.id}', '${contest.platform}')">
+                        Simulate Attend Contest
+                    </button>
+                    <button class="btn-primary" style="width: 100%; background: var(--bg-hover); color: var(--text-primary);" onclick="window.open('https://google.com/search?q=${contest.platform}+${contest.title}', '_blank')">
+                        Go to Platform <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+                    </button>`
+                }
+            `;
+            quizList.appendChild(card);
+        });
+        lucide.createIcons();
+    }
+
+    window.simulateContest = async (contestId, platform) => {
+        const scoreStr = prompt(`Enter your simulated score/rating for ${platform} (e.g. 1000 - 2500):`, "1400");
+        if (!scoreStr) return;
+        
+        const score = parseInt(scoreStr, 10);
+        if (isNaN(score)) return alert("Invalid score entered.");
+
+        if (!userData.platformScores) userData.platformScores = {};
+        userData.platformScores[platform] = { score, lastAttended: new Date().toISOString(), contestId };
+
+        if (currentUser) {
+            await setDoc(doc(db, 'users', currentUser.uid), { platformScores: userData.platformScores }, { merge: true });
+        }
+        
+        alert(`Score saved! Your ${platform} rating is now ${score}. Your learning schedule will adapt accordingly.`);
+        renderQuizzes(); // Re-render to show attended status
+    };
+
+    // =============================================
     // QUIZ QUESTIONS BANK (per-course, per-module)
     // =============================================
     const QUIZ_BANK = {
@@ -848,11 +928,86 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('roadmap-progress-fill').style.width = `${progressPct}%`;
         document.getElementById('roadmap-progress-label').textContent = `${progressPct}% Complete · ${completedModules}/${totalModules} modules`;
 
+        // Contest Banner & Platform Logic
+        const contestBannerCont = document.getElementById('contest-banner-container');
+        const platformStatsCont = document.getElementById('platform-stats-container');
+        contestBannerCont.style.display = 'none';
+        platformStatsCont.style.display = 'none';
+
+        // Check if path has required contests
+        const requiredContests = (typeof UPCOMING_CONTESTS !== 'undefined' ? UPCOMING_CONTESTS : []).filter(c => c.requiredFor.includes(pathKey));
+        let highestContestScore = null;
+        let highestPlatform = null;
+        let isPlatformLocked = false;
+
+        if (requiredContests.length > 0) {
+            // Find highest score among required platforms
+            requiredContests.forEach(c => {
+                if (userData.platformScores && userData.platformScores[c.platform]) {
+                    const sc = userData.platformScores[c.platform].score;
+                    if (highestContestScore === null || sc > highestContestScore) {
+                        highestContestScore = sc;
+                        highestPlatform = c.platform;
+                    }
+                }
+            });
+
+            // Need to attend if they've completed >=1 module and no score
+            if (completedModules > 0 && highestContestScore === null) {
+                isPlatformLocked = true;
+            }
+
+            // Render Banner
+            const upcoming = requiredContests[0]; // Just take first upcoming
+            contestBannerCont.style.display = 'block';
+            contestBannerCont.innerHTML = `
+                <div style="background: linear-gradient(135deg, rgba(59,104,82,0.1), rgba(188,238,210,0.2)); border: 1px solid var(--primary); padding: 15px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i data-lucide="bell-ring" style="color: var(--primary);"></i>
+                        <div>
+                            <h4 style="margin: 0; color: var(--text-primary);">Mandatory Contest: ${upcoming.title} on ${upcoming.platform}</h4>
+                            <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">Date: ${upcoming.date} — You must attend to generate future day-by-day schedules.</p>
+                        </div>
+                    </div>
+                    <button class="btn-primary" id="remind-email-btn" onclick="toggleEmailReminder(this)" style="font-size: 0.85rem; padding: 8px 16px;">
+                        <i data-lucide="mail"></i> Set Email Reminder
+                    </button>
+                </div>
+            `;
+
+            // Render Stats
+            if (highestContestScore !== null) {
+                platformStatsCont.style.display = 'block';
+                let suggestion = "Keep practicing problem-solving.";
+                if (highestContestScore < 1200) suggestion = "Focus on basics: Arrays, Strings, and simple Greedy algorithms.";
+                else if (highestContestScore < 1500) suggestion = "Time to study Graphs, DP, and standard tricky variations.";
+                else suggestion = "Great rating! Focus on Advanced DP and Segment Trees.";
+
+                platformStatsCont.innerHTML = `
+                    <div style="background: white; border: 1px solid var(--border-color); padding: 20px; border-radius: 16px; margin-top: 15px;">
+                        <h4 style="margin: 0 0 10px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="bar-chart-2"></i> ${highestPlatform} Performance Sync
+                        </h4>
+                        <div style="display: flex; align-items: center; gap: 40px;">
+                            <div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Current Rating</p>
+                                <p style="font-size: 1.8rem; font-weight: bold; color: var(--primary); margin: 0;">${highestContestScore}</p>
+                            </div>
+                            <div style="flex: 1;">
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">AI Suggestion</p>
+                                <p style="margin: 0; font-weight: 500;">${suggestion}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         // Render visual nodes
         renderVisualRoadmap(pathKey, pathData.milestones, scores);
 
         // Render adaptive schedule
-        renderAdaptiveSchedule(pathKey, pathData.milestones, scores);
+        renderAdaptiveSchedule(pathKey, pathData.milestones, scores, { locked: isPlatformLocked, score: highestContestScore });
 
         // Render job guide
         renderJobGuide(pathData.job_guide);
@@ -945,15 +1100,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // =============================================
     // ADAPTIVE SCHEDULE GENERATOR — Day-by-Day
     // =============================================
-    function renderAdaptiveSchedule(pathKey, milestones, scores) {
+    window.toggleEmailReminder = function(btn) {
+        if (btn.classList.contains('reminded')) {
+            btn.classList.remove('reminded');
+            btn.innerHTML = `<i data-lucide="mail"></i> Set Email Reminder`;
+            btn.style.background = 'var(--primary)';
+        } else {
+            btn.classList.add('reminded');
+            btn.innerHTML = `<i data-lucide="check-circle" style="color:white;"></i> Reminder Sent!`;
+            btn.style.background = 'var(--success)';
+            alert('A reminder has been scheduled for your registered email address!');
+        }
+        lucide.createIcons();
+    };
+
+    function renderAdaptiveSchedule(pathKey, milestones, scores, contestData = { locked: false, score: null }) {
         const container = document.getElementById('schedule-weeks');
         const subtitleEl = document.querySelector('.schedule-subtitle');
         container.innerHTML = '';
 
         const hasAnyScore = Object.keys(scores).length > 0;
-        const dailyHours = userData.dailyHours || 2; // default 2 hrs/day
+        let dailyHours = userData.dailyHours || 2; // default 2 hrs/day
         const pathData = ROADMAP_DATA[pathKey];
-        const dailyTopics = pathData.dailyTopics || {};
+
+        // Apply global modifier if platform score is low
+        if (contestData.score !== null && contestData.score < 1200) {
+            dailyHours = Math.max(0.5, dailyHours - 0.5); // Example: force slower schedule by reducing effective capacity
+        }
 
         if (!hasAnyScore) {
             subtitleEl.textContent = 'Complete a module test to generate your personalized day-by-day roadmap!';
@@ -992,22 +1165,25 @@ document.addEventListener('DOMContentLoaded', () => {
         setupHoursSelector('#hours-selector-inline', pathKey, milestones, scores);
 
         // Generate and render the day schedule
-        const dayPlan = buildDayPlan(pathKey, milestones, scores, dailyHours);
+        const dayPlan = buildDayPlan(pathKey, milestones, scores, dailyHours, contestData.locked);
         renderDayPlan(container, dayPlan, scores);
     }
 
-    function buildDayPlan(pathKey, milestones, scores, dailyHours) {
+    function buildDayPlan(pathKey, milestones, scores, dailyHours, contestLocked = false) {
         const pathData = ROADMAP_DATA[pathKey];
         const dailyTopics = pathData.dailyTopics || {};
         const plan = [];
         let dayNumber = 1;
-        let missedHours = 0; // catch-up hours from missed days
+        
+        let modulesToProcess = milestones;
+        if (contestLocked) {
+            modulesToProcess = [milestones[0]];
+        }
 
-        milestones.forEach((milestone, moduleIdx) => {
+        modulesToProcess.forEach((milestone, moduleIdx) => {
             const score = scores[moduleIdx];
-            const baseHours = milestone.hoursNeeded || 10;
+            let baseHours = milestone.hoursNeeded || 10;
 
-            // Adjust based on performance
             let totalHours;
             let status, statusLabel;
             if (score === undefined) {
@@ -1015,56 +1191,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 status = 'upcoming';
                 statusLabel = 'Upcoming';
             } else if (score >= 80) {
-                totalHours = Math.ceil(baseHours * 0.6); // 60% — already strong
+                totalHours = Math.ceil(baseHours * 0.6);
                 status = 'on-track';
                 statusLabel = '🏆 Excellent';
             } else if (score >= 60) {
-                totalHours = Math.ceil(baseHours * 1.2); // 120% — some review
-                status = 'review';
-                statusLabel = '📈 Review';
+                totalHours = baseHours;
+                status = 'on-track';
+                statusLabel = '📈 Good';
             } else {
-                totalHours = Math.ceil(baseHours * 1.8); // 180% — intensive
-                status = 'revisit';
-                statusLabel = '🔄 Intensive';
+                totalHours = Math.ceil(baseHours * 1.5);
+                status = 'needs-work';
+                statusLabel = '🔄 Needs Practice';
+            }
+            
+            if (window.highestContestScore && window.highestContestScore < 1200) {
+                 totalHours += 2;
             }
 
-            // Get topic list for this module
-            const topics = dailyTopics[moduleIdx] || 
-                milestone.skills.map(s => s.name);
-
-            // Distribute topics across days for this module
-            const hoursPerDay = dailyHours;
-            const moduleDays = Math.ceil(totalHours / hoursPerDay);
-
-            // Spread topics evenly across days
-            const topicsPerDay = topics.length > 0 
-                ? Math.max(1, Math.ceil(topics.length / moduleDays))
-                : 1;
-
-            for (let d = 0; d < moduleDays; d++) {
-                const dayTopics = topics.slice(d * topicsPerDay, (d + 1) * topicsPerDay);
-                const catchUp = missedHours > 0 && d === 0;
-                const catchUpNote = catchUp ? `+${missedHours}h catch-up from previous day` : null;
+            let topicPool = dailyTopics[moduleIdx] || milestone.skills.map(s => s.name);
+            if (topicPool.length === 0) topicPool = ['Review fundamentals', 'Practice exercises', 'Project integration'];
+            
+            while (totalHours > 0) {
+                const hrsForDay = Math.min(totalHours, dailyHours);
+                totalHours -= hrsForDay;
+                
+                const dayTopic = topicPool[(dayNumber - 1) % topicPool.length];
 
                 plan.push({
-                    day: dayNumber++,
+                    day: dayNumber,
                     moduleIdx,
-                    moduleTitle: milestone.title,
-                    moduleLevel: milestone.level,
+                    title: milestone.title,
+                    topic: dayTopic,
+                    hours: hrsForDay,
                     status,
-                    statusLabel,
-                    score,
-                    topics: dayTopics.length > 0 ? dayTopics : [`Practice ${milestone.title}`],
-                    hoursToday: hoursPerDay + (catchUp ? missedHours : 0),
-                    catchUpNote,
-                    isModuleStart: d === 0,
-                    isModuleEnd: d === moduleDays - 1,
-                    totalModuleDays: moduleDays,
-                    dayOfModule: d + 1
+                    statusLabel
                 });
-                missedHours = 0;
+                dayNumber++;
             }
         });
+        
+        if (contestLocked && milestones.length > 1) {
+            plan.push({
+                lockedNotice: true,
+                day: dayNumber,
+                title: "Schedule Locked",
+                topic: "Attend the upcoming contest on LeetCode/CodeChef to unlock further day-by-day scheduling."
+            });
+        }
 
         return plan;
     }
@@ -1075,17 +1248,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentModule = -1;
 
         plan.forEach((day, idx) => {
+            if (day.lockedNotice) {
+                 const notice = document.createElement('div');
+                 notice.style.cssText = "grid-column: 1/-1; background: rgba(239,68,68,0.1); border: 1px dashed var(--danger); padding: 20px; border-radius: 12px; text-align: center; color: var(--danger); font-weight: 500; margin-top: 15px;";
+                 notice.innerHTML = `<i data-lucide="lock" style="margin-bottom: 8px;"></i><br>${day.topic}`;
+                 container.appendChild(notice);
+                 return;
+            }
+
             // Module separator
             if (day.moduleIdx !== currentModule) {
                 currentModule = day.moduleIdx;
                 const sep = document.createElement('div');
+                const score = scores[day.moduleIdx];
                 sep.className = `module-separator status-${day.status}`;
                 sep.innerHTML = `
                     <div class="module-sep-title">
                         <span class="module-sep-num">Module ${day.moduleIdx + 1}</span>
-                        <span class="module-sep-name">${day.moduleTitle}</span>
-                        <span class="module-sep-level">${day.moduleLevel}</span>
-                        ${day.score !== undefined ? `<span class="module-sep-score" style="background:${day.score>=80?'var(--success)':day.score>=60?'var(--warning)':'var(--danger)'}20; color:${day.score>=80?'var(--success)':day.score>=60?'var(--warning)':'var(--danger)'}">Score: ${day.score}%</span>` : '<span class="module-sep-score" style="background:rgba(150,150,150,0.1);">Not tested</span>'}
+                        <span class="module-sep-name">${day.title}</span>
+                        ${score !== undefined ? `<span class="module-sep-score" style="background:${score>=80?'var(--success)':score>=60?'var(--warning)':'var(--danger)'}20; color:${score>=80?'var(--success)':score>=60?'var(--warning)':'var(--danger)'}">Score: ${score}%</span>` : '<span class="module-sep-score" style="background:rgba(150,150,150,0.1);">Not tested</span>'}
                         <span class="module-sep-tag">${day.statusLabel}</span>
                     </div>
                 `;
@@ -1093,27 +1274,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const card = document.createElement('div');
-            card.className = `day-card status-${day.status} ${day.isModuleStart ? 'module-start' : ''} ${day.isModuleEnd ? 'module-end' : ''}`;
-
-            const catchUpHtml = day.catchUpNote
-                ? `<div class="catchup-banner"><span>🔄</span> <em>${day.catchUpNote}</em></div>`
-                : '';
-
-            const topicsHtml = day.topics.map(t =>
-                `<span class="day-topic-chip">${t}</span>`
-            ).join('');
+            card.className = `day-card status-${day.status}`;
 
             card.innerHTML = `
                 <div class="day-card-left">
                     <div class="day-number">Day ${day.day}</div>
-                    <div class="day-of-module">${day.dayOfModule}/${day.totalModuleDays}</div>
                 </div>
                 <div class="day-card-body">
-                    ${catchUpHtml}
-                    <div class="day-topics-wrap">${topicsHtml}</div>
+                    <div class="day-topics-wrap"><span class="day-topic-chip">${day.topic}</span></div>
                     <div class="day-footer">
-                        <span class="day-hours">⏱ ${day.hoursToday}h today</span>
-                        ${day.isModuleEnd ? '<span class="day-test-badge">🧪 Take Module Test</span>' : ''}
+                        <span class="day-hours">⏱ ${day.hours}h today</span>
                     </div>
                 </div>
             `;
@@ -1121,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Summary
-        const totalDays = plan[plan.length - 1]?.day || 0;
+        const totalDays = plan[plan.length - 1]?.day || plan[plan.length - 2]?.day || 0;
         const summary = document.createElement('div');
         summary.className = 'schedule-summary-card';
         summary.innerHTML = `

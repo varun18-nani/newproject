@@ -1624,38 +1624,48 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Helpers ---
 
     function setupEventListeners() {
-        backBtn.onclick = () => {
-            switchView('path-selection');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
+        if (backBtn) {
+            backBtn.onclick = () => {
+                switchView('path-selection');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+        }
         
-        closeModal.onclick = () => {
-            skillModal.style.display = 'none';
-        };
+        if (closeModal) {
+            closeModal.onclick = () => {
+                if (skillModal) skillModal.style.display = 'none';
+            };
+        }
         
-        window.onclick = (event) => {
-            if (event.target === skillModal) {
+        window.addEventListener('click', (event) => {
+            if (skillModal && event.target === skillModal) {
                 skillModal.style.display = 'none';
             }
-        };
+        });
 
         const navBrand = document.getElementById('nav-brand');
-        navBrand.onclick = () => {
-            if (currentUser) {
-                switchView('path-selection');
-            } else {
-                showHome();
-            }
-        };
+        if (navBrand) {
+            navBrand.onclick = () => {
+                if (currentUser) {
+                    switchView('path-selection');
+                } else {
+                    showHome();
+                }
+            };
+        }
 
-        searchInput.addEventListener('input', (e) => {
-            renderPathSelection(e.target.value);
-        });
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                renderPathSelection(e.target.value);
+            });
+        }
 
-        getStartedBtn.addEventListener('click', () => {
-            showLogin();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
+        if (getStartedBtn) {
+            getStartedBtn.addEventListener('click', () => {
+                showLogin();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
 
         // --- Auth State ---
         let isRegistering = false;

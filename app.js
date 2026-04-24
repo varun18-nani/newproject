@@ -91,8 +91,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         userData = snap.data();
                         if (!userData.scores) userData.scores = {};
                         if (!userData.completedSkills) userData.completedSkills = [];
-                        if (!userData.profile) userData.profile = { name: user.displayName || 'User', email: user.email, goal: 'Not Set', photoURL: user.photoURL || '' };
+                        if (!userData.profile) userData.profile = {};
                         if (!userData.videoProgress) userData.videoProgress = {};
+                        // Always sync latest auth data into profile
+                        let profileUpdated = false;
+                        if (!userData.profile.name) { userData.profile.name = user.displayName || 'User'; profileUpdated = true; }
+                        if (!userData.profile.email) { userData.profile.email = user.email; profileUpdated = true; }
+                        if (!userData.profile.goal) { userData.profile.goal = 'Not Set'; profileUpdated = true; }
+                        // Sync Google/provider photo if profile has no custom photo
+                        if (!userData.profile.photoURL && user.photoURL) {
+                            userData.profile.photoURL = user.photoURL;
+                            profileUpdated = true;
+                        }
+                        if (profileUpdated) {
+                            await updateDoc(doc(db, 'users', user.uid), { profile: userData.profile });
+                        }
                     } else {
                         userData = {
                             scores: {},
@@ -118,7 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateProfileUI() {
         if (!userData || !userData.profile) return;
-        const { name, email, goal, photoURL } = userData.profile;
+        const { name, email, goal } = userData.profile;
+        // Fallback: use Firestore photoURL, then Firebase Auth photoURL, then empty
+        const photoURL = userData.profile.photoURL || (currentUser && currentUser.photoURL) || '';
         const nameVal = name || 'User';
         
         // Update all name placeholders
@@ -133,25 +148,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const newEmail = document.getElementById('profile-email-val');
         if (newEmail) newEmail.textContent = email || 'No Email Linked';
         
-        // Avatar Logic - Fix for persistent display
+        // Avatar Logic — LinkedIn-style: show photo if available, else initials
         const avatarImg = document.getElementById('profile-avatar-img');
         const avatarInitials = document.getElementById('profile-avatar-initials');
         
         if (avatarImg && avatarInitials) {
             if (photoURL && photoURL.startsWith('http')) {
                 avatarImg.src = photoURL;
-                avatarImg.onload = () => {
-                    avatarImg.style.display = 'block';
-                    avatarInitials.style.display = 'none';
-                };
+                avatarImg.style.display = 'block';
+                avatarInitials.style.display = 'none';
                 avatarImg.onerror = () => {
                     avatarImg.style.display = 'none';
                     avatarInitials.style.display = 'flex';
+                    avatarInitials.textContent = nameVal.charAt(0).toUpperCase();
                 };
             } else {
                 avatarImg.style.display = 'none';
                 avatarInitials.style.display = 'flex';
-                avatarInitials.textContent = name ? name.charAt(0).toUpperCase() : 'U';
+                avatarInitials.textContent = nameVal.charAt(0).toUpperCase();
             }
         }
         
@@ -1960,11 +1974,23 @@ document.addEventListener('DOMContentLoaded', () => {
             photoInputNew.onchange = async (e) => {
                 if (!currentUser || e.target.files.length === 0) return;
                 const file = e.target.files[0];
-                const avatarIcon = avatarWrapperNew.querySelector('.material-symbols-outlined');
-                if (avatarIcon) avatarIcon.textContent = 'sync'; // Show loading state
+
+                // Validate file type and size (max 5MB)
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image must be under 5MB.');
+                    return;
+                }
+
+                // Show loading overlay on avatar
+                const loadingOverlay = document.getElementById('avatar-upload-overlay');
+                if (loadingOverlay) loadingOverlay.style.display = 'flex';
                 
                 try {
-                    const storageRef = ref(storage, `profile_photos/${currentUser.uid}_${file.name}`);
+                    const storageRef = ref(storage, `profile_photos/${currentUser.uid}`);
                     await uploadBytes(storageRef, file);
                     const photoURL = await getDownloadURL(storageRef);
                     userData.profile = { ...userData.profile, photoURL };
@@ -1972,7 +1998,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateProfileUI();
                 } catch (err) {
                     console.error(err);
-                    alert("Upload failed");
+                    alert('Upload failed. Please try again.');
+                } finally {
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
+                    photoInputNew.value = ''; // Reset so same file can be re-selected
                 }
             };
         }

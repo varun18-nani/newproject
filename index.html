@@ -39,6 +39,7 @@
             animation: slideUp 0.3s ease-out;
         }
         @keyframes slideUp { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         /* Additional Category Theme Gradients */
         .theme-robotics { background: linear-gradient(135deg, #1c5a5f, #0c2b2e); }
@@ -422,9 +423,18 @@
                     <!-- Hero Profile Section -->
                     <section class="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12">
                         <div class="relative">
-                            <div class="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-[#e1e3de] overflow-hidden bg-[#3b6852] relative" id="profile-avatar-wrapper-new" style="cursor: pointer;">
-                                <div id="profile-avatar-initials" class="w-full h-full flex items-center justify-center text-4xl font-bold text-white">U</div>
-                                <img id="profile-avatar-img" class="absolute inset-0 w-full h-full object-cover" style="display:none;">
+                            <div class="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-[#3b6852] overflow-hidden bg-[#3b6852] relative group shadow-lg" id="profile-avatar-wrapper-new" style="cursor: pointer;" title="Click to change profile photo">
+                                <div id="profile-avatar-initials" class="w-full h-full flex items-center justify-center text-4xl font-bold text-white select-none">U</div>
+                                <img id="profile-avatar-img" class="absolute inset-0 w-full h-full object-cover" style="display:none;" alt="Profile Photo">
+                                <!-- LinkedIn-style camera hover overlay -->
+                                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex flex-col items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100" style="pointer-events:none;">
+                                    <span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
+                                    <span class="text-white text-xs font-semibold mt-1">Change Photo</span>
+                                </div>
+                                <!-- Loading overlay (shown during upload) -->
+                                <div id="avatar-upload-overlay" class="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center" style="display:none;">
+                                    <span class="material-symbols-outlined text-white text-3xl" style="animation: spin 1s linear infinite;">progress_activity</span>
+                                </div>
                                 <input type="file" id="direct-profile-photo-new" accept="image/*" style="display:none;">
                             </div>
                             <div class="absolute bottom-1 right-1 bg-[#3b6852] text-white p-2 rounded-full shadow-lg">
